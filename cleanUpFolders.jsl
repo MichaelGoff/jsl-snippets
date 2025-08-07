@@ -1,0 +1,46 @@
+// Use a specific JMP Live Connection
+lc = New JMP Live( Connection("livedemo") );
+
+/**********************************************************************
+ * Assumption - All of the reports consuming the data I'm deleting 
+ *              are located in the same folder
+ * 			  - I don't want to clear out any nested folders
+ *********************************************************************/
+
+// Keep an array of folder IDs that we want to clear reports and data from
+cleanIDs = {"hrrTDQNXMHyvHK7R78Gql", "sjlYH6N4wMvL8QJQ3WTJL", "vbvSF1_9D6YHmSL9j431C"};
+
+For Each({id}, cleanIDs,
+	// Grab the folder, log it, and collect the children
+	result = lc << Get Folder(id);
+	discAustinFolder = << result << As Scriptable;
+	write ("Found: ", discAustinFolder << Get Title, "\!n");
+	result = discAustinFolder << Get Children;
+	children = result << As Scriptable;
+
+	// We need to remove the folders prior to the data because 
+	// it will fail to delete the data if a report still relies on it
+
+	// Clean up all published reports in the folder
+	For ( i = 1, i <= children << Get Number Of Items, i += 1,
+		if (children[i] << Get Type == "Report", 
+			title = children[i] << Get Title;
+			result = lc << Delete Report ( children[i] << Get ID);
+			If ( result == 1,
+				Write("\!nDeleted Report: ", title);
+			);
+		);
+	);
+
+	// Clean up data after all reports that use it are gone
+	For ( i = 1, i <= children << Get Number Of Items, i += 1,
+		if (children[i] << Get Type == "Data", 
+			title = children[i] << Get Title;
+			result = lc << Delete Data ( children[i] << Get ID);
+			If ( result == 1,
+				Write("\!nDeleted Data: ", title);
+			);
+		);
+	);
+);
+
